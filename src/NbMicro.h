@@ -4,7 +4,7 @@
  *  ...........................................
  *  File: NbMicro.h (Header)
  *  ........................................... 
- *  Version: 1.0.1 / 2020-05-07
+ *  Version: 1.1.0 / 2020-05-24
  *  gustavo.casanova@gmail.com
  *  ...........................................
  *  This library handles the communication protocol with devices
@@ -15,41 +15,41 @@
 #define _NBMICRO_H_
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <nb-twi-cmd.h>
 
-#include <unordered_set>
-
-#include "Wire.h"
 #include "libconfig.h"
 
-typedef uint8_t byte;
-
 // Store of TWI addresses in use ...
-static std::unordered_set<byte> active_addresses;
+#if (ARDUINO_ARCH_ESP8266 || ARDUINO_ESP32_DEV || ESP_PLATFORM)
+#include <unordered_set>
+static std::unordered_set<uint8_t> active_addresses;
+#else   // -----
+volatile static uint8_t active_addresses[TWI_DEVICE_QTY] = {0};
+#endif  // ARDUINO_ARCH_ESP8266 || ARDUINO_ESP32_DEV || ESP_PLATFORM
 
 /* 
  * ===================================================================
- * Class NbMicro: Represents a slave microcontroller
+ * NbMicro class: Represents a slave microcontroller
  * using the NB command set connected to the TWI bus
  * ===================================================================
  */
 class NbMicro {
    public:
-    NbMicro(byte twi_address = 0, byte sda = 0, byte scl = 0);
+    NbMicro(uint8_t twi_address = 0, uint8_t sda = 0, uint8_t scl = 0);
     ~NbMicro();
-    byte GetTwiAddress(void);
-    byte SetTwiAddress(byte twi_address);
-    byte TwiCmdXmit(byte twi_cmd, byte twi_reply,
-                    byte twi_reply_arr[] = nullptr, byte reply_size = 0);
-    byte TwiCmdXmit(byte twi_cmd_arr[], byte cmd_size, byte twi_reply,
-                    byte twi_reply_arr[] = nullptr, byte reply_size = 0);
+    uint8_t GetTwiAddress(void);
+    uint8_t SetTwiAddress(uint8_t twi_address);
+    uint8_t TwiCmdXmit(uint8_t twi_cmd, uint8_t twi_reply,
+                       uint8_t twi_reply_arr[] = nullptr, uint8_t reply_size = 0);
+    uint8_t TwiCmdXmit(uint8_t twi_cmd_arr[], uint8_t cmd_size, uint8_t twi_reply,
+                       uint8_t twi_reply_arr[] = nullptr, uint8_t reply_size = 0);
+    uint8_t InitMicro(void);
 
    protected:
-    byte InitMicro(void);
-    byte addr_ = 0, sda_ = 0, scl_ = 0;
-    bool reusing_twi_connection_ = true;
+    uint8_t addr_ = 0, sda_ = 0, scl_ = 0;
 
    private:
 };
 
-#endif /* _NBMICRO_H_ */
+#endif  // _NBMICRO_H_

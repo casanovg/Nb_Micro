@@ -1,12 +1,12 @@
 /*
- *  AVR BLINK TWIS
+ *  BLINK WIRE SLAVE for ATmega microcontrollers
  *  Author: Gustavo Casanova / Nicebots
- *  ...........................................
- *  File: avr-blink-twis.c (Blink application)
- *  ........................................... 
- *  Version: 1.1 / 2020-06-03
+ *  ................................................
+ *  File: blink-twis-ino-io.cpp (Blink application)
+ *  ................................................ 
+ *  Version: 1.0 / 2020-05-16
  *  gustavo.casanova@nicebots.com
- *  ...........................................
+ *  ................................................
  */
 
 /* This a led blink test program compatible with
@@ -20,9 +20,7 @@
 */
 
 // Includes
-#include "avr-blink-twis.h"
-
-#define LONG_DELAY 0xFFFF
+#include "blink-wires-ino-io.h"
 
 // Global variables
 uint8_t command[32] = {0}; /* I2C Command received from master  */
@@ -31,12 +29,10 @@ uint8_t commandLength = 0; /* I2C Command number of bytes  */
 bool reset_now = false;
 bool slow_ops_enabled = false;
 volatile bool blink = true;
-volatile uint16_t toggle_delay = LONG_DELAY;
+volatile uint32_t toggle_delay = LONG_DELAY;
 
 // Prototypes
 void DisableWatchDog(void);
-void SetCPUSpeed1MHz(void);
-void SetCPUSpeed8MHz(void);
 void ReceiveEvent(uint8_t);
 void EnableSlowOps(void);
 void ResetMCU(void);
@@ -48,18 +44,18 @@ int main(void) {
        |    Setup Block    |
        |___________________|
     */
-    DisableWatchDog(); /* Disable watchdog to avoid continuous loop after reset */
-    SetCPUSpeed1MHz(); /* Set prescaler = 1 (System clock / 1) */
-    // Set output pins
+    DisableWatchDog();           /* Disable watchdog to avoid continuous loop after reset */
     LED_DDR |= (1 << LED_PIN);   /* Set led control pin Data Direction Register for output */
     LED_PORT &= ~(1 << LED_PIN); /* Turn led off */
     _delay_ms(250);              /* Delay to allow programming at 1 MHz after power on */
-    SetCPUSpeed8MHz();           /* Set the CPU prescaler for 8 MHz */
-    // Initialize I2C
-    p_receive_event = ReceiveEvent;    /* Pointer to TWI receive event function */
-    p_enable_slow_ops = EnableSlowOps; /* Pointer to enable slow options function */
-    UsiTwiDriverInit(TWI_ADDR);        /* NOTE: TWI_ADDR is defined in Makefile! */
-    sei();                             /* Enable Interrupts */
+    Wire.onReceive(ReceiveEvent);
+    Wire.onRequest(RequestEvent);
+    Wire.begin(TWI_ADDR);
+    Serial.begin(9600);
+    sei(); /* Enable Interrupts */
+    ClrScr();
+    Serial.println("\n\rBlink wire slave test started");
+    Serial.println(".............................\n\r");
 
     /*  ___________________
        |                   | 
@@ -74,6 +70,8 @@ int main(void) {
         if (toggle_delay-- == 0) {
             if (blink == true) {
                 LED_PORT ^= (1 << LED_PIN); /* Toggle PB1 */
+            } else {
+                LED_PORT &= ~(1 << LED_PIN); /* Turn PB1 off */
             }
             toggle_delay = LONG_DELAY;
         }
@@ -86,38 +84,53 @@ int main(void) {
    | TWI data receive event |
    |________________________|
 */
-void ReceiveEvent(uint8_t received_bytes) {
+void ReceiveEvent(byte received_bytes) {
     for (uint8_t i = 0; i < received_bytes; i++) {
-        command[i] = UsiTwiReceiveByte(); /* Store the data sent by the TWI master in the data buffer */
+        command[i] = Wire.read();
+
+        Serial.print("0x");
+        Serial.print(command[i], HEX);
+        Serial.print(" ");
     }
-    uint8_t opCodeAck = ~command[0]; /* Command Operation Code acknowledge => Command Bitwise "Not". */
+}
+
+/*  ________________________
+   |                        |
+   | TWI data request event |
+   |________________________|
+*/
+void RequestEvent(void) {
+    byte opCodeAck = ~command[0]; /* Command Operation Code acknowledge => Command Bitwise "Not". */
     switch (command[0]) {
         // ******************
         // * SETIO1_1 Reply *
         // ******************
         case SETIO1_1: {
-            LED_DDR |= (1 << LED_PIN);  /* Set led control pin Data Direction Register for output */
-            LED_PORT |= (1 << LED_PIN); /* Turn PB1 on (Power control pin) */
             blink = true;
-            UsiTwiTransmitByte(opCodeAck);
+            Wire.write(opCodeAck);
             break;
         }
         // ******************
         // * SETIO1_0 Reply *
         // ******************
         case SETIO1_0: {
-            LED_DDR |= (1 << LED_PIN);   /* Set led control pin Data Direction Register for output */
-            LED_PORT &= ~(1 << LED_PIN); /* Turn PB1 off (Power control pin) */
             blink = false;
-            UsiTwiTransmitByte(opCodeAck);
+            Wire.write(opCodeAck);
+            break;
+        }
+        case INFORMAT: {
+            char info[6] = {'H', 'e', 'l', 'l', 'o', '!'};
+            Wire.write(opCodeAck);
+            for (int i = 0; i < sizeof(info); i++) {
+                Wire.write(info[i]);
+            }
             break;
         }
         // ******************
         // * RESETMCU Reply *
         // ******************
         case RESETMCU: {
-            LED_PORT &= ~(1 << LED_PIN); /* Turn power off */
-            UsiTwiTransmitByte(opCodeAck);
+            Wire.write(opCodeAck);
             reset_now = true;
             break;
         }
@@ -125,43 +138,10 @@ void ReceiveEvent(uint8_t received_bytes) {
         // * Unknown Command Reply *
         // *************************
         default: {
-            UsiTwiTransmitByte(UNKNOWNC);
+            Wire.write(UNKNOWNC);
             break;
         }
     }
-}
-
-/*  ________________________
-   |                        |
-   | Enable slow operations |
-   |________________________|
-*/
-void EnableSlowOps(void) {
-    slow_ops_enabled = true;
-}
-
-/*  __________________________
-   |                          |
-   | Function SetCPUSpeed1MHz |
-   |__________________________|
-*/
-void SetCPUSpeed1MHz(void) {
-    cli();                                   /* Disable interrupts */
-    CLKPR = (1 << CLKPCE);                   /* Mandatory for setting prescaler */
-    CLKPR = ((1 << CLKPS1) | (1 << CLKPS0)); /* Set prescaler 8 (System clock / 8) */
-    sei();                                   /* Enable interrupts */
-}
-
-/*  __________________________
-   |                          |
-   | Function SetCPUSpeed8MHz |
-   |__________________________|
-*/
-void SetCPUSpeed8MHz(void) {
-    cli();                 /* Disable interrupts */
-    CLKPR = (1 << CLKPCE); /* Mandatory for setting CPU prescaler */
-    CLKPR = (0x00);        /* Set CPU prescaler 1 (System clock / 1) */
-    sei();                 /* Enable interrupts */
 }
 
 /*  __________________________
@@ -170,9 +150,16 @@ void SetCPUSpeed8MHz(void) {
    |__________________________|
 */
 void DisableWatchDog(void) {
+    wdt_reset();
     MCUSR = 0;
+#ifdef ARDUINO_AVR_PRO
+    WDTCSR = ((1 << WDCE) | (1 << WDE));
+    WDTCSR = 0;
+#endif  // ARDUINO_AVR_PRO
+#ifdef ARDUINO_AVR_ATTINYX5
     WDTCR = ((1 << WDCE) | (1 << WDE));
     WDTCR = ((1 << WDP2) | (1 << WDP1) | (1 << WDP0));
+#endif  // ARDUINO_AVR_ATTINYX5
 }
 
 /*  ________________
@@ -185,4 +172,16 @@ void ResetMCU(void) {
     wdt_enable(WDTO_15MS);
     for (;;) {
     }
+}
+
+/*  ______________
+   |              |
+   | Clear Screen |
+   |______________|
+*/
+void ClrScr(void) {
+    Serial.write(27);     // ESC command
+    Serial.print("[2J");  // clear screen command
+    Serial.write(27);     // ESC command
+    Serial.print("[H");   // cursor to home command
 }
