@@ -3,13 +3,13 @@
   =================================
   NbMicro configuration
   ---------------------------------
-  Version: 1.1.0 / 2020-05-24
+  Version: 1.1.1 / 2020-06-25
   gustavo.casanova@gmail.com
   ---------------------------------
 */
 
-#ifndef _NBMICRO_CONFIG_H_
-#define _NBMICRO_CONFIG_H_
+#ifndef NBMICRO_CONFIG_H
+#define NBMICRO_CONFIG_H
 
 /////////////////////////////////////////////////////////////////////////////
 ////////////                  NbMicro settings                   ////////////
@@ -43,4 +43,4 @@
 ////////////                    End settings                     ////////////
 /////////////////////////////////////////////////////////////////////////////
 
-#endif  // _NBMICRO_CONFIG_H_
+#endif  // NBMICRO_CONFIG_H

@@ -4,15 +4,15 @@
  *  ...........................................
  *  File: NbMicro.h (Header)
  *  ........................................... 
- *  Version: 1.1.0 / 2020-05-24
+ *  Version: 1.1.1 / 2020-06-25
  *  gustavo.casanova@gmail.com
  *  ...........................................
  *  This library handles the communication protocol with devices
  *  that implement the NB command set over a TWI (I2C) bus.
  */
 
-#ifndef _NBMICRO_H_
-#define _NBMICRO_H_
+#ifndef NBMICRO_H
+#define NBMICRO_H
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -52,4 +52,4 @@ class NbMicro {
    private:
 };
 
-#endif  // _NBMICRO_H_
+#endif  // NBMICRO_H
