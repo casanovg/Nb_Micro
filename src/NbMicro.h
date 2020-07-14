@@ -4,7 +4,7 @@
  *  ...........................................
  *  File: NbMicro.h (Header)
  *  ........................................... 
- *  Version: 1.1.1 / 2020-06-25
+ *  Version: 1.2.0 / 2020-07-13
  *  gustavo.casanova@gmail.com
  *  ...........................................
  *  This library handles the communication protocol with devices
@@ -40,11 +40,11 @@ class NbMicro {
     ~NbMicro();
     uint8_t GetTwiAddress(void);
     uint8_t SetTwiAddress(uint8_t twi_address);
+    uint8_t InitMicro(void);
     uint8_t TwiCmdXmit(uint8_t twi_cmd, uint8_t twi_reply,
                        uint8_t twi_reply_arr[] = nullptr, uint8_t reply_size = 0);
     uint8_t TwiCmdXmit(uint8_t twi_cmd_arr[], uint8_t cmd_size, uint8_t twi_reply,
                        uint8_t twi_reply_arr[] = nullptr, uint8_t reply_size = 0);
-    uint8_t InitMicro(void);
 
    protected:
     uint8_t addr_ = 0, sda_ = 0, scl_ = 0;

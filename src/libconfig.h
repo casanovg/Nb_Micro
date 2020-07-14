@@ -3,7 +3,7 @@
   =================================
   NbMicro configuration
   ---------------------------------
-  Version: 1.1.1 / 2020-06-25
+  Version: 1.2.0 / 2020-07-13
   gustavo.casanova@gmail.com
   ---------------------------------
 */
@@ -16,6 +16,16 @@
 /////////////////////////////////////////////////////////////////////////////
 
 // General defs
+#ifndef DEBUG_LEVEL
+#if (ARDUINO_ARCH_ESP8266 || ARDUINO_ESP32_DEV || ESP_PLATFORM)
+#define DEBUG_LEVEL 0      // Debug level: 0 = No debug info over serial terminal, 1+ = Progressively increasing verbosity
+#else                      // -----
+#define DEBUG_LEVEL false  // NOTE: DEBUG not implemented for platforms other than ESP8266 and ESP32.
+#endif                     // ARDUINO_ARCH_ESP8266 || ARDUINO_ESP32_DEV || ESP_PLATFORM
+#endif                     // DEBUG_LEVEL
+#ifndef USE_SERIAL
+#define USE_SERIAL Serial
+#endif                    // USE_SERIAL
 #define SDA_STD_PIN 4     // I2C SDA standard pin on ESP866 boards
 #define SCL_STD_PIN 5     // I2C SCL standard pin on ESP866 boards
 #define LOW_TWI_ADDR 8    // Lowest allowed TWI address on slave devices
@@ -33,10 +43,8 @@
 
 // NbMicro::TwiCmdXmit defs
 #define STOP_ON_REQ true   // Config: true=master releases the bus with "stop" after a request, false=sends restart
-#define ERR_TWI_ADDR_NA 1  // Error: Can't create NbMicro object, the TWI address is already in use
-#define ERR_NO_TWI_SPAC 2  // Error: No available TWI addresses to create a new object
-#define ERR_CMD_PARSE_S 3  // Error: reply doesn't match command (single byte)
-#define ERR_CMD_PARSE_M 4  // Error: reply doesn't match command (multi byte)
+#define ERR_CMD_PARSE_S 1  // Error: reply doesn't match command (single byte)
+#define ERR_CMD_PARSE_M 2  // Error: reply doesn't match command (multi byte)
 // End NbMicro::TwiCmdXmit defs
 
 /////////////////////////////////////////////////////////////////////////////
